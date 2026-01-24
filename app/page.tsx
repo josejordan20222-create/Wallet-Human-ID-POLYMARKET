@@ -1,20 +1,20 @@
-import WorldIDButton from "@/components/WorldIDButton"; // Asegúrate de que la ruta sea correcta
+import LoginCard from "@/components/LoginCard";
 
 export default function Home() {
     return (
         <main className="flex min-h-screen flex-col items-center justify-center p-6 relative overflow-hidden">
 
-            {/* Elementos decorativos de fondo (Orbes de luz) */}
-            <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-blue-600/20 rounded-full blur-[120px] pointer-events-none" />
-            <div className="absolute bottom-[-10%] right-[-10%] w-[400px] h-[400px] bg-purple-600/10 rounded-full blur-[100px] pointer-events-none" />
+            {/* Elementos decorativos de fondo (Orbes de luz distantes y sutiles) */}
+            <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] bg-blue-900/10 rounded-full blur-[150px] pointer-events-none mix-blend-screen" />
+            <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] bg-purple-900/10 rounded-full blur-[130px] pointer-events-none mix-blend-screen" />
 
-            <div className="z-10 w-full max-w-md">
-                {/* Aquí cargamos tu componente con Glassmorphism */}
-                <WorldIDButton />
+            {/* Login Card Component */}
+            <div className="z-10 w-full flex justify-center">
+                <LoginCard />
             </div>
 
-            <footer className="absolute bottom-5 text-gray-500 text-xs text-center w-full">
-                Powered by Railway & World ID
+            <footer className="absolute bottom-6 text-white/20 text-[10px] tracking-widest text-center w-full uppercase">
+                Secured by World ID & Railway
             </footer>
         </main>
     );

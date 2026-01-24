@@ -4,17 +4,22 @@
 
 :root {
   --foreground-rgb: 255, 255, 255;
-  --background-start-rgb: 10, 10, 15; /* Casi negro */
-  --background-end-rgb: 20, 20, 35;   /* Azul muy oscuro */
+  --background-start-rgb: 5, 5, 10;
+  --background-end-rgb: 10, 10, 20;
 }
 
 body {
   color: rgb(var(--foreground-rgb));
-  background: radial-gradient(
-    circle at 50% 0%, 
-    #2a2a4a 0%, /* Luz superior */
-    #0a0a0f 60% /* Oscuridad inferior */
-  );
+  /* Deep Space Gradient */
+  background: radial-gradient(circle at 50% -20%,
+      #1a1b3a 0%,
+      /* Azul/Violeta muy oscuro en la cima */
+      #05050a 45%,
+      /* Casi negro */
+      #000000 100%
+      /* Negro puro */
+    );
+  background-attachment: fixed;
   min-height: 100vh;
   margin: 0;
   display: flex;
@@ -22,21 +27,11 @@ body {
   align-items: center;
   justify-content: center;
   font-family: Arial, Helvetica, sans-serif;
+  overflow-x: hidden;
 }
 
-/* --- TU CLASE GLASSMORPHISM (Mejorada) --- */
-.glass-card {
-  background: rgba(255, 255, 255, 0.03); /* Más sutil */
-  backdrop-filter: blur(20px);           /* Más borroso */
+/* Glassmorphism helpers if needed via generic classes */
+.glass-effect {
+  backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37); /* Sombra profunda */
-  border-radius: 24px;
-  color: white;
-  transition: transform 0.3s ease;
-}
-
-.glass-card:hover {
-  transform: translateY(-5px); /* Efecto flotante al pasar el mouse */
-  border-color: rgba(255, 255, 255, 0.2);
 }

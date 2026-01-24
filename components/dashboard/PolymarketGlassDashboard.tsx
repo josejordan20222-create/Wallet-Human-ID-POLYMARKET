@@ -12,13 +12,15 @@ import {
     AlertTriangle,
     Loader2
 } from "lucide-react";
-import { useAccount } from "wagmi";
+import { useAccount, useChainId } from "wagmi";
+import { polygon } from "wagmi/chains";
 import { useMarketData } from "@/hooks/useMarketData";
 import { usePolymarketSession } from "@/hooks/usePolymarketSession";
 import { usePolymarketOrderbook } from "@/hooks/usePolymarketOrderbook";
 import { usePolymarketTrade } from "@/hooks/usePolymarketTrade";
 import SendModal from "@/components/wallet/SendModal";
 import ReceiveModal from "@/components/wallet/ReceiveModal";
+import NetworkSwitcher from "@/components/wallet/NetworkSwitcher";
 import { Toaster } from "sonner";
 
 // --- ANIMATION VARIANTS (Strict Typing) ---
@@ -53,11 +55,14 @@ const TOKEN_ID_NO = "21742633143463906290569050155826241533067272736897614950488
 
 export default function PolymarketGlassDashboard() {
     const { address } = useAccount();
+    const chainId = useChainId();
+    const isPolygon = chainId === polygon.id;
+
     const { isProxyEnabled, login } = usePolymarketSession();
     const { portfolioValue, usdcBalance } = useMarketData(); // Keep visual data from here for now
 
-    // Real Data Hooks
-    const { orderBook, isLoading: isBookLoading } = usePolymarketOrderbook(MARKET_ID);
+    // Real Data Hooks (Only active on Polygon)
+    const { orderBook, isLoading: isBookLoading } = usePolymarketOrderbook(isPolygon ? MARKET_ID : "");
     const { trade, status: tradeStatus } = usePolymarketTrade();
 
     const [side, setSide] = useState<"YES" | "NO">("YES");
@@ -68,6 +73,7 @@ export default function PolymarketGlassDashboard() {
     const [isReceiveOpen, setIsReceiveOpen] = useState(false);
 
     const handleTrade = () => {
+        if (!isPolygon) return;
         const tokenId = side === "YES" ? TOKEN_ID_YES : TOKEN_ID_NO;
         // Current best price logic (simplified)
         const bestPrice = side === "YES"
@@ -95,11 +101,14 @@ export default function PolymarketGlassDashboard() {
                 className="sticky top-4 z-50 mb-8 w-full max-w-7xl mx-auto"
             >
                 <div className="flex items-center justify-between px-6 py-4 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl">
-                    <div className="flex items-center space-x-3">
-                        <div className="relative">
-                            <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_10px_#10b981]"></div>
+                    <div className="flex items-center space-x-4">
+                        <NetworkSwitcher />
+                        <div className="hidden md:flex items-center space-x-2">
+                            <div className={`w-2 h-2 rounded-full ${isPolygon ? 'bg-emerald-500 animate-pulse' : 'bg-gray-500'}`}></div>
+                            <span className="text-sm font-medium tracking-wide text-white/90">
+                                {isPolygon ? "Polymarket Live" : "Wallet Mode"}
+                            </span>
                         </div>
-                        <span className="text-sm font-medium tracking-wide text-white/90">Polygon Synced</span>
                     </div>
 
                     <div className="flex items-center space-x-4">
@@ -159,121 +168,140 @@ export default function PolymarketGlassDashboard() {
                     </div>
                 </motion.div>
 
-                {/* C. THE TRADING TERMINAL */}
+                {/* C. THE TRADING TERMINAL or PLACEHOLDER */}
                 <motion.div variants={itemVariants} className="lg:col-span-4 space-y-4">
 
-                    {/* PROXY CHECKER */}
-                    {!isProxyEnabled && (
-                        <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 backdrop-blur-md flex items-start space-x-3">
-                            <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
-                            <div>
-                                <h3 className="text-sm font-bold text-amber-500">Trading Disabled</h3>
-                                <p className="text-xs text-white/60 mt-1 mb-2">You need a Proxy Wallet to trade on Polymarket.</p>
-                                <button
-                                    onClick={login}
-                                    className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold rounded-lg transition-colors"
-                                >
-                                    Enable Trading
-                                </button>
+                    {!isPolygon ? (
+                        // NON-POLYGON STATE
+                        <div className="h-full min-h-[400px] p-8 rounded-[32px] bg-black/40 border border-white/10 backdrop-blur-xl shadow-2xl flex flex-col items-center justify-center text-center space-y-4">
+                            <div className="w-16 h-16 rounded-full bg-indigo-500/10 flex items-center justify-center">
+                                <Activity className="w-8 h-8 text-indigo-400" />
+                            </div>
+                            <h3 className="text-xl font-bold text-white">Prediction Markets</h3>
+                            <p className="text-white/50 text-sm max-w-[250px]">
+                                Trading is available exclusively on the Polygon network.
+                            </p>
+                            <div className="p-3 bg-white/5 rounded-xl text-xs text-white/40">
+                                Switch to Polygon to access the Orderbook and trade.
+                            </div>
+                        </div>
+                    ) : (
+                        // POLYGON STATE (Original Trading UI)
+                        <div className="space-y-4">
+                            {/* PROXY CHECKER */}
+                            {!isProxyEnabled && (
+                                <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 backdrop-blur-md flex items-start space-x-3">
+                                    <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
+                                    <div>
+                                        <h3 className="text-sm font-bold text-amber-500">Trading Disabled</h3>
+                                        <p className="text-xs text-white/60 mt-1 mb-2">You need a Proxy Wallet to trade on Polymarket.</p>
+                                        <button
+                                            onClick={login}
+                                            className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold rounded-lg transition-colors"
+                                        >
+                                            Enable Trading
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="p-6 rounded-[32px] bg-black/40 border border-white/10 backdrop-blur-xl shadow-2xl">
+                                <h3 className="text-lg font-bold text-white mb-6 flex items-center space-x-2">
+                                    <TrendingUp className="w-5 h-5 text-indigo-400" />
+                                    <span>Order Book</span>
+                                </h3>
+
+                                {/* VISUAL ORDERBOOK */}
+                                <div className="space-y-1 mb-8 font-mono text-sm">
+                                    {(isBookLoading && orderBook.asks.length === 0) && (
+                                        <div className="text-center py-4 text-white/30">Loading Market Data...</div>
+                                    )}
+
+                                    {/* ASKS (SELLERS) - RED */}
+                                    <div className="space-y-1 bg-red-500/5 p-2 rounded-xl">
+                                        {orderBook.asks.slice(0, 3).reverse().map((ask, i) => (
+                                            <div key={i} className="flex justify-between text-rose-400 relative">
+                                                <span className="z-10">{parseFloat(ask.price.toString()).toFixed(2)}</span>
+                                                <span className="z-10 text-white/40">{ask.size}</span>
+                                                <div
+                                                    className="absolute right-0 top-0 h-full bg-rose-500/10 rounded-l-md"
+                                                    style={{ width: `${(ask.size / 6000) * 100}%` }}
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <div className="py-2 text-center text-xs text-white/30 tracking-widest uppercase">Spread</div>
+
+                                    {/* BIDS (BUYERS) - GREEN */}
+                                    <div className="space-y-1 bg-emerald-500/5 p-2 rounded-xl">
+                                        {orderBook.bids.slice(0, 3).map((bid, i) => (
+                                            <div key={i} className="flex justify-between text-emerald-400 relative">
+                                                <span className="z-10">{parseFloat(bid.price.toString()).toFixed(2)}</span>
+                                                <span className="z-10 text-white/40">{bid.size}</span>
+                                                <div
+                                                    className="absolute right-0 top-0 h-full bg-emerald-500/10 rounded-l-md"
+                                                    style={{ width: `${(bid.size / 6000) * 100}%` }}
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* ACTION PANEL */}
+                                <div className="p-1 rounded-xl bg-white/5 flex mb-6">
+                                    <button
+                                        onClick={() => setSide("YES")}
+                                        className={`flex-1 py-3 rounded-lg text-sm font-bold transition-all ${side === "YES" ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20" : "text-white/40 hover:text-white"}`}
+                                    >
+                                        BUY YES
+                                    </button>
+                                    <button
+                                        onClick={() => setSide("NO")}
+                                        className={`flex-1 py-3 rounded-lg text-sm font-bold transition-all ${side === "NO" ? "bg-rose-500 text-white shadow-lg shadow-rose-500/20" : "text-white/40 hover:text-white"}`}
+                                    >
+                                        BUY NO
+                                    </button>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="text-xs text-white/40 uppercase font-bold tracking-wider">Amount (USDC)</label>
+                                        <div className="relative mt-2">
+                                            <input
+                                                type="number"
+                                                value={amount}
+                                                onChange={(e) => setAmount(e.target.value)}
+                                                placeholder="0.00"
+                                                className="w-full bg-white/5 border border-white/10 rounded-xl py-4 pl-4 pr-12 text-2xl font-bold text-white focus:outline-none focus:border-indigo-500/50 transition-colors placeholder:text-white/10"
+                                            />
+                                            <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                                                <span className="text-xs font-bold text-white/30">USDC</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex justify-between text-xs py-2 border-t border-white/5">
+                                        <span className="text-white/40">Est. Shares</span>
+                                        <span className="text-white font-mono">{amount ? (parseFloat(amount) / 0.65).toFixed(2) : "0.00"}</span>
+                                    </div>
+
+                                    <button
+                                        onClick={handleTrade}
+                                        disabled={tradeStatus === "APPROVING" || tradeStatus === "SIGNING" || tradeStatus === "POSTING" || !amount}
+                                        className="w-full py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold shadow-xl shadow-indigo-500/20 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2"
+                                    >
+                                        {tradeStatus === "APPROVING" && <><Loader2 className="animate-spin w-5 h-5" /> Approving...</>}
+                                        {tradeStatus === "SIGNING" && <><Loader2 className="animate-spin w-5 h-5" /> Sign Order...</>}
+                                        {tradeStatus === "POSTING" && <><Loader2 className="animate-spin w-5 h-5" /> Placing...</>}
+                                        {tradeStatus === "SUCCESS" && "Success!"}
+                                        {tradeStatus === "IDLE" && "Place Order"}
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     )}
 
-                    <div className="p-6 rounded-[32px] bg-black/40 border border-white/10 backdrop-blur-xl shadow-2xl">
-                        <h3 className="text-lg font-bold text-white mb-6 flex items-center space-x-2">
-                            <TrendingUp className="w-5 h-5 text-indigo-400" />
-                            <span>Order Book</span>
-                        </h3>
-
-                        {/* VISUAL ORDERBOOK */}
-                        <div className="space-y-1 mb-8 font-mono text-sm">
-                            {(isBookLoading && orderBook.asks.length === 0) && (
-                                <div className="text-center py-4 text-white/30">Loading Market Data...</div>
-                            )}
-
-                            {/* ASKS (SELLERS) - RED */}
-                            <div className="space-y-1 bg-red-500/5 p-2 rounded-xl">
-                                {orderBook.asks.slice(0, 3).reverse().map((ask, i) => (
-                                    <div key={i} className="flex justify-between text-rose-400 relative">
-                                        <span className="z-10">{parseFloat(ask.price.toString()).toFixed(2)}</span>
-                                        <span className="z-10 text-white/40">{ask.size}</span>
-                                        <div
-                                            className="absolute right-0 top-0 h-full bg-rose-500/10 rounded-l-md"
-                                            style={{ width: `${(ask.size / 6000) * 100}%` }}
-                                        />
-                                    </div>
-                                ))}
-                            </div>
-
-                            <div className="py-2 text-center text-xs text-white/30 tracking-widest uppercase">Spread</div>
-
-                            {/* BIDS (BUYERS) - GREEN */}
-                            <div className="space-y-1 bg-emerald-500/5 p-2 rounded-xl">
-                                {orderBook.bids.slice(0, 3).map((bid, i) => (
-                                    <div key={i} className="flex justify-between text-emerald-400 relative">
-                                        <span className="z-10">{parseFloat(bid.price.toString()).toFixed(2)}</span>
-                                        <span className="z-10 text-white/40">{bid.size}</span>
-                                        <div
-                                            className="absolute right-0 top-0 h-full bg-emerald-500/10 rounded-l-md"
-                                            style={{ width: `${(bid.size / 6000) * 100}%` }}
-                                        />
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* ACTION PANEL */}
-                        <div className="p-1 rounded-xl bg-white/5 flex mb-6">
-                            <button
-                                onClick={() => setSide("YES")}
-                                className={`flex-1 py-3 rounded-lg text-sm font-bold transition-all ${side === "YES" ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20" : "text-white/40 hover:text-white"}`}
-                            >
-                                BUY YES
-                            </button>
-                            <button
-                                onClick={() => setSide("NO")}
-                                className={`flex-1 py-3 rounded-lg text-sm font-bold transition-all ${side === "NO" ? "bg-rose-500 text-white shadow-lg shadow-rose-500/20" : "text-white/40 hover:text-white"}`}
-                            >
-                                BUY NO
-                            </button>
-                        </div>
-
-                        <div className="space-y-4">
-                            <div>
-                                <label className="text-xs text-white/40 uppercase font-bold tracking-wider">Amount (USDC)</label>
-                                <div className="relative mt-2">
-                                    <input
-                                        type="number"
-                                        value={amount}
-                                        onChange={(e) => setAmount(e.target.value)}
-                                        placeholder="0.00"
-                                        className="w-full bg-white/5 border border-white/10 rounded-xl py-4 pl-4 pr-12 text-2xl font-bold text-white focus:outline-none focus:border-indigo-500/50 transition-colors placeholder:text-white/10"
-                                    />
-                                    <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                                        <span className="text-xs font-bold text-white/30">USDC</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="flex justify-between text-xs py-2 border-t border-white/5">
-                                <span className="text-white/40">Est. Shares</span>
-                                <span className="text-white font-mono">{amount ? (parseFloat(amount) / 0.65).toFixed(2) : "0.00"}</span>
-                            </div>
-
-                            <button
-                                onClick={handleTrade}
-                                disabled={tradeStatus === "APPROVING" || tradeStatus === "SIGNING" || tradeStatus === "POSTING" || !amount}
-                                className="w-full py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold shadow-xl shadow-indigo-500/20 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2"
-                            >
-                                {tradeStatus === "APPROVING" && <><Loader2 className="animate-spin w-5 h-5" /> Approving...</>}
-                                {tradeStatus === "SIGNING" && <><Loader2 className="animate-spin w-5 h-5" /> Sign Order...</>}
-                                {tradeStatus === "POSTING" && <><Loader2 className="animate-spin w-5 h-5" /> Placing...</>}
-                                {tradeStatus === "SUCCESS" && "Success!"}
-                                {tradeStatus === "IDLE" && "Place Order"}
-                            </button>
-                        </div>
-
-                    </div>
                 </motion.div>
 
             </div>

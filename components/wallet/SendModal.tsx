@@ -2,17 +2,17 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Send, ArrowRight, Wallet, AlertCircle, Loader2, CheckCircle2 } from "lucide-react";
-import { useSendTransaction, useWriteContract, useEstimateGas, useBalance, useAccount } from "wagmi";
+import { X, Send, ArrowRight, Wallet, AlertCircle, Loader2, CheckCircle2, AlertTriangle } from "lucide-react";
+import { useSendTransaction, useWriteContract, useEstimateGas, useBalance, useAccount, useChainId } from "wagmi";
 import { parseEther, parseUnits, isAddress, formatEther, formatUnits } from "viem";
 import { toast } from "sonner";
+import { getUsdcAddress } from "@/config/tokens";
+import { mainnet } from "wagmi/chains";
 
 interface SendModalProps {
     isOpen: boolean;
     onClose: () => void;
 }
-
-const USDC_ADDRESS = "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174";
 
 // ERC20 ABI for transfer
 const ERC20_ABI = [
@@ -30,9 +30,12 @@ const ERC20_ABI = [
 
 export default function SendModal({ isOpen, onClose }: SendModalProps) {
     const { address } = useAccount();
+    const chainId = useChainId();
+    const usdcAddress = getUsdcAddress(chainId);
+
     const [recipient, setRecipient] = useState("");
     const [amount, setAmount] = useState("");
-    const [asset, setAsset] = useState<"POL" | "USDC">("POL");
+    const [asset, setAsset] = useState<"NATIVE" | "USDC">("NATIVE");
 
     // Status tracking
     const [status, setStatus] = useState<"IDLE" | "ESTIMATING" | "SIGNING" | "SENDING" | "SUCCESS">("IDLE");
@@ -56,8 +59,14 @@ export default function SendModal({ isOpen, onClose }: SendModalProps) {
     } = useWriteContract();
 
     // Balances
-    const { data: polBalance } = useBalance({ address });
-    const { data: usdcBalance } = useBalance({ address, token: USDC_ADDRESS });
+    const { data: nativeBalance } = useBalance({ address });
+    const { data: usdcBalance } = useBalance({
+        address,
+        token: usdcAddress,
+        query: { enabled: !!usdcAddress } // Only fetch if USDC exists for this chain
+    });
+
+    const nativeSymbol = nativeBalance?.symbol || "ETH";
 
     // Reset on close
     useEffect(() => {
@@ -96,9 +105,10 @@ export default function SendModal({ isOpen, onClose }: SendModalProps) {
 
 
     const handleMax = () => {
-        if (asset === "POL" && polBalance) {
-            // Leave 0.01 POL for gas
-            const val = parseFloat(formatEther(polBalance.value)) - 0.01;
+        if (asset === "NATIVE" && nativeBalance) {
+            // Leave 0.01 ETH/POL for gas (Adjust if on Mainnet)
+            const buffer = chainId === mainnet.id ? 0.02 : 0.01;
+            const val = parseFloat(formatEther(nativeBalance.value)) - buffer;
             setAmount(val > 0 ? val.toFixed(4) : "0");
         } else if (asset === "USDC" && usdcBalance) {
             setAmount(formatUnits(usdcBalance.value, usdcBalance.decimals));
@@ -118,14 +128,19 @@ export default function SendModal({ isOpen, onClose }: SendModalProps) {
         setStatus("SIGNING");
 
         try {
-            if (asset === "POL") {
+            if (asset === "NATIVE") {
                 sendTransaction({
                     to: recipient,
                     value: parseEther(amount)
                 });
             } else {
+                if (!usdcAddress) {
+                    toast.error("USDC not supported on this network");
+                    setStatus("IDLE");
+                    return;
+                }
                 writeContract({
-                    address: USDC_ADDRESS,
+                    address: usdcAddress,
                     abi: ERC20_ABI,
                     functionName: "transfer",
                     args: [recipient, parseUnits(amount, 6)]
@@ -172,6 +187,19 @@ export default function SendModal({ isOpen, onClose }: SendModalProps) {
 
                             {/* Body */}
                             <div className="p-6 space-y-6">
+                                {/* Gas Warning for Mainnet */}
+                                {chainId === mainnet.id && (
+                                    <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl flex gap-3">
+                                        <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
+                                        <div>
+                                            <h4 className="text-sm font-bold text-amber-500">High Gas Fee Warning</h4>
+                                            <p className="text-xs text-amber-500/80 mt-1">
+                                                You are on Ethereum Mainnet. Transactions may be expensive.
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+
                                 {status === "SUCCESS" ? (
                                     <div className="text-center py-8 space-y-4">
                                         <div className="w-16 h-16 bg-emerald-500/20 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -199,11 +227,11 @@ export default function SendModal({ isOpen, onClose }: SendModalProps) {
                                         {/* Asset Selector */}
                                         <div className="flex bg-black/20 p-1 rounded-xl">
                                             <button
-                                                onClick={() => setAsset("POL")}
-                                                className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${asset === "POL" ? "bg-white/10 text-white shadow-lg" : "text-white/40 hover:text-white"
+                                                onClick={() => setAsset("NATIVE")}
+                                                className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${asset === "NATIVE" ? "bg-white/10 text-white shadow-lg" : "text-white/40 hover:text-white"
                                                     }`}
                                             >
-                                                POL
+                                                {nativeSymbol}
                                             </button>
                                             <button
                                                 onClick={() => setAsset("USDC")}
@@ -235,10 +263,10 @@ export default function SendModal({ isOpen, onClose }: SendModalProps) {
                                             <div className="flex justify-between items-center">
                                                 <label className="text-xs font-bold text-white/50 uppercase tracking-wider">Amount</label>
                                                 <span className="text-xs text-white/40">
-                                                    Balance: {asset === "POL"
-                                                        ? `${polBalance ? formatEther(polBalance.value).slice(0, 6) : "0.00"}`
+                                                    Balance: {asset === "NATIVE"
+                                                        ? `${nativeBalance ? formatEther(nativeBalance.value).slice(0, 6) : "0.00"}`
                                                         : `${usdcBalance ? formatUnits(usdcBalance.value, usdcBalance.decimals) : "0.00"}`
-                                                    } {asset}
+                                                    } {asset === "NATIVE" ? nativeSymbol : "USDC"}
                                                 </span>
                                             </div>
                                             <div className="relative">
@@ -256,7 +284,7 @@ export default function SendModal({ isOpen, onClose }: SendModalProps) {
                                                     >
                                                         MAX
                                                     </button>
-                                                    <span className="font-bold text-white/50 text-sm">{asset}</span>
+                                                    <span className="font-bold text-white/50 text-sm">{asset === "NATIVE" ? nativeSymbol : "USDC"}</span>
                                                 </div>
                                             </div>
                                         </div>

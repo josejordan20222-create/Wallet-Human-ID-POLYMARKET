@@ -1,7 +1,7 @@
 "use client";
 
-import MetaMaskWalletView from "@/components/wallet/MetaMaskWalletView";
+import PolymarketGlassDashboard from "@/components/dashboard/PolymarketGlassDashboard";
 
 export default function DashboardPage() {
-    return <MetaMaskWalletView />;
+    return <PolymarketGlassDashboard />;
 }

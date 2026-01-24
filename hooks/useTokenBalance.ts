@@ -1,5 +1,6 @@
-import { useAccount, useReadContract } from "wagmi";
-import { formatUnits } from "viem";
+import { useAccount, useReadContract, useChainId } from "wagmi";
+import { formatUnits, Address } from "viem";
+import { getUsdcAddress } from "@/config/tokens";
 
 const ERC20_ABI = [
     {
@@ -18,24 +19,31 @@ const ERC20_ABI = [
     }
 ] as const;
 
-export function useTokenBalance(tokenAddress: `0x${string}`) {
+export function useTokenBalance(tokenAddress?: Address) {
     const { address } = useAccount();
+    const chainId = useChainId();
+
+    // If no address provided, try to get USDC for current chain
+    const targetAddress = tokenAddress || getUsdcAddress(chainId);
 
     const { data: balanceData, isLoading: balanceLoading } = useReadContract({
-        address: tokenAddress,
+        address: targetAddress,
         abi: ERC20_ABI,
         functionName: "balanceOf",
         args: address ? [address] : undefined,
         query: {
-            enabled: !!address,
+            enabled: !!address && !!targetAddress,
             refetchInterval: 10000,
         }
     });
 
     const { data: decimals } = useReadContract({
-        address: tokenAddress,
+        address: targetAddress,
         abi: ERC20_ABI,
         functionName: "decimals",
+        query: {
+            enabled: !!targetAddress,
+        }
     });
 
     const formatted = (typeof balanceData === 'bigint' && typeof decimals === 'number')
@@ -46,5 +54,7 @@ export function useTokenBalance(tokenAddress: `0x${string}`) {
         balance: balanceData,
         formatted,
         isLoading: balanceLoading,
+        symbol: "USDC", // Assuming generic usage for now
+        tokenAddress: targetAddress
     };
 }

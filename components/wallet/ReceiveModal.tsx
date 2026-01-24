@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Copy, QrCode as QrIcon, Check } from "lucide-react";
-import { useAccount } from "wagmi";
+import { X, Copy, QrCode as QrIcon, Check, AlertCircle } from "lucide-react";
+import { useAccount, useChains, useChainId } from "wagmi";
 import { QRCodeSVG } from "qrcode.react";
 import { toast } from "sonner";
 
@@ -14,7 +14,11 @@ interface ReceiveModalProps {
 
 export default function ReceiveModal({ isOpen, onClose }: ReceiveModalProps) {
     const { address } = useAccount();
+    const chainId = useChainId();
+    const chains = useChains();
     const [copied, setCopied] = useState(false);
+
+    const activeChain = chains.find(c => c.id === chainId);
 
     const handleCopy = () => {
         if (address) {
@@ -77,11 +81,12 @@ export default function ReceiveModal({ isOpen, onClose }: ReceiveModalProps) {
                                 </div>
 
                                 <div className="space-y-4 w-full text-center">
-                                    <p className="text-white/60 text-sm">
-                                        Scan this QR code to deposit funds
-                                        <br />
-                                        <span className="text-emerald-400 font-medium">Polygon Network (Matic)</span>
-                                    </p>
+                                    <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl flex items-start gap-3 text-left">
+                                        <AlertCircle className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
+                                        <p className="text-sm text-blue-200/80">
+                                            Send assets on <span className="text-blue-400 font-bold">{activeChain?.name || "Unknown Network"}</span> only.
+                                        </p>
+                                    </div>
 
                                     {/* Address Display */}
                                     {address && (

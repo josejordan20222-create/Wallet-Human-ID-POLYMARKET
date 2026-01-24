@@ -18,10 +18,11 @@ export default function WorldIDButton() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center p-6 space-y-4 glass-card">
-      <h2 className="text-xl font-bold">World ID Verification</h2>
+    <>
       {done ? (
-        <p className="text-green-400">Verified!</p>
+        <div className="flex flex-col items-center animate-in fade-in zoom-in duration-300">
+          <p className="text-emerald-400 font-medium text-sm">✓ Identity Verified</p>
+        </div>
       ) : (
         <IDKitWidget
           app_id={process.env.NEXT_PUBLIC_WLD_APP_ID as `app_${string}` || "app_staging"}
@@ -32,7 +33,7 @@ export default function WorldIDButton() {
         >
           {({ open }: { open: () => void }) => (
             <button
-              className="px-6 py-3 font-bold bg-white text-black rounded-full hover:bg-gray-200 transition-all"
+              className="w-full bg-white text-black hover:bg-gray-200 active:scale-[0.98] transition-all font-bold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl hover:shadow-white/10"
               onClick={open}
             >
               Ingresar con World ID
@@ -40,6 +41,6 @@ export default function WorldIDButton() {
           )}
         </IDKitWidget>
       )}
-    </div>
+    </>
   );
 }

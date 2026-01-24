@@ -1,21 +1,28 @@
-import LoginCard from "@/components/LoginCard";
+import GlassLogin from "@/components/GlassLogin";
 
 export default function Home() {
     return (
-        <main className="flex min-h-screen flex-col items-center justify-center p-6 relative overflow-hidden">
+        <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-black">
 
-            {/* Elementos decorativos de fondo (Orbes de luz distantes y sutiles) */}
-            <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] bg-blue-900/10 rounded-full blur-[150px] pointer-events-none mix-blend-screen" />
-            <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] bg-purple-900/10 rounded-full blur-[130px] pointer-events-none mix-blend-screen" />
+            {/* 1. EL BACKGROUND (GIF) */}
+            <div className="absolute inset-0 z-0">
+                {/* Overlay oscuro para legibilidad */}
+                <div className="absolute inset-0 z-10 bg-black/60" />
 
-            {/* Login Card Component */}
-            <div className="z-10 w-full flex justify-center">
-                <LoginCard />
+                {/* Etiqueta de imagen para el GIF */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                    src="/background.gif"
+                    alt="Background Animation"
+                    className="h-full w-full object-cover opacity-80"
+                />
             </div>
 
-            <footer className="absolute bottom-6 text-white/20 text-[10px] tracking-widest text-center w-full uppercase">
-                Secured by World ID & Railway
-            </footer>
+            {/* 2. EL CONTENIDO (Z-Index alto para estar encima del fondo) */}
+            <div className="relative z-20 px-4">
+                <GlassLogin />
+            </div>
+
         </main>
     );
 }

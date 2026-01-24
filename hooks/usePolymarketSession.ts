@@ -1,5 +1,6 @@
 import { useAccount, useSignMessage, useReadContract } from "wagmi";
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 
 // Placeholder for Polymarket/Gnosis Proxy Factory on Polygon
 const PROXY_FACTORY_ADDRESS = "0xa584D285F5D0992300D775D4E680E7B28E8C0468";
@@ -40,25 +41,47 @@ export function usePolymarketSession() {
         }
     }, [hasProxy]);
 
-    // 2. Login / SIWE (Simulated for API Auth)
+    // 2. Login / Enable Trading (Simulated for Demo)
     const login = async () => {
         if (!address) return;
         setSessionLoading(true);
-        try {
-            const message = `Log in to Polymarket Clone\nTime: ${Date.now()}`;
-            const signature = await signMessageAsync({ message });
 
-            // Setup API Headers here (Dummy)
-            if (typeof window !== 'undefined') {
-                localStorage.setItem("polymarket_auth", signature);
-            }
+        try {
+            // STEP 1: Request Signature
+            const message = `Enable Polymarket Trading\nTimestamp: ${Date.now()}`;
+            await signMessageAsync({ message });
+
+            // STEP 2: Simulate Proxy Deployment
+            toast.info("Deploying Proxy Wallet...", { duration: 2000 });
+            await new Promise(r => setTimeout(r, 2000));
+
+            toast.success("Proxy Wallet Enabled!");
+
+            // Persist State
+            setIsProxyEnabled(true);
             setIsAuthenticated(true);
+            if (typeof window !== 'undefined') {
+                localStorage.setItem("polymarket_proxy_enabled", "true");
+            }
+
         } catch (error) {
-            console.error("Login failed", error);
+            console.error("Login/Enable failed", error);
+            toast.error("User denied signature");
         } finally {
             setSessionLoading(false);
         }
     };
+
+    // Load persisted state on mount
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const stored = localStorage.getItem("polymarket_proxy_enabled");
+            if (stored === "true") {
+                setIsProxyEnabled(true);
+                setIsAuthenticated(true);
+            }
+        }
+    }, []);
 
     return {
         address,

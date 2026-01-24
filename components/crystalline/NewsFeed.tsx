@@ -77,14 +77,21 @@ export default function NewsFeed() {
                     className="group relative overflow-hidden rounded-2xl border border-glass-border bg-glass-surface backdrop-blur-md hover:bg-white/5 transition-colors duration-500"
                 >
                     <div className="flex flex-col md:flex-row h-full">
+                        import Image from "next/image";
+
+                        // ... (existing code)
+
                         {/* Image Column */}
                         <div className="md:w-1/3 h-48 md:h-auto relative overflow-hidden">
                             <div className="absolute inset-0 bg-gradient-to-r from-transparent to-[#0a0a0c] md:bg-gradient-to-l opacity-50 z-10" />
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
+                            <Image
                                 src={article.image}
                                 alt="News visual"
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                                fill
+                                className="object-cover group-hover:scale-105 transition-transform duration-700"
+                                sizes="(max-width: 768px) 100vw, 33vw"
+                                priority={article.id === 1}
+                                unoptimized
                             />
                         </div>
 

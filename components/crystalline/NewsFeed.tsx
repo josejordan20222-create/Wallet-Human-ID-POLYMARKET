@@ -3,6 +3,7 @@
 import useSWR from "swr";
 import { motion } from "framer-motion";
 import { Clock, TrendingUp } from "lucide-react";
+import Image from "next/image";
 
 // Mock Data Fetcher
 const fetcher = async () => {
@@ -77,9 +78,6 @@ export default function NewsFeed() {
                     className="group relative overflow-hidden rounded-2xl border border-glass-border bg-glass-surface backdrop-blur-md hover:bg-white/5 transition-colors duration-500"
                 >
                     <div className="flex flex-col md:flex-row h-full">
-                        import Image from "next/image";
-
-                        // ... (existing code)
 
                         {/* Image Column */}
                         <div className="md:w-1/3 h-48 md:h-auto relative overflow-hidden">

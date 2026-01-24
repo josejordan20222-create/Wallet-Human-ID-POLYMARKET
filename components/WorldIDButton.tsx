@@ -30,7 +30,7 @@ export default function WorldIDButton() {
           handleVerify={handleVerify}
           verification_level={VerificationLevel.Device}
         >
-          {({ open }) => (
+          {({ open }: { open: () => void }) => (
             <button
               className="px-6 py-3 font-bold bg-white text-black rounded-full hover:bg-gray-200 transition-all"
               onClick={open}

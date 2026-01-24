@@ -3,17 +3,19 @@
 import { IDKitWidget, VerificationLevel } from "@worldcoin/idkit";
 import { useState } from "react";
 
-export default function WorldIDButton() {
+interface WorldIDButtonProps {
+  onVerificationSuccess?: () => void;
+}
+
+export default function WorldIDButton({ onVerificationSuccess }: WorldIDButtonProps) {
   const [done, setDone] = useState(false);
 
-  // Mock handler
   const onSuccess = (result: any) => {
     console.log("Verified successfully", result);
     setDone(true);
-    // Redirect to dashboard after 1.5s
-    setTimeout(() => {
-      window.location.href = "/dashboard";
-    }, 1500);
+    if (onVerificationSuccess) {
+      onVerificationSuccess();
+    }
   };
 
   const handleVerify = async (proof: any) => {

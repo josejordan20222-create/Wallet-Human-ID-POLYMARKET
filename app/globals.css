@@ -35,3 +35,11 @@ body {
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
 }
+
+/* Fix for World ID Modal Z-Index */
+#idkit-widget,
+[data-idkit-modal],
+div[id^="idkit-"] {
+  z-index: 99999 !important;
+  position: relative;
+}

@@ -21,8 +21,8 @@ export default function Home() {
                 <div className="absolute inset-0 bg-black/40" />
             </div>
 
-            {/* 2. EL CONTENIDO (Z-Index alto para estar encima del fondo) */}
-            <div className="relative z-20 px-4">
+            {/* 2. EL CONTENIDO (Z-Index bajo para no tapar el modal de World ID) */}
+            <div className="relative z-10 px-4">
                 <GlassLogin />
             </div>
 

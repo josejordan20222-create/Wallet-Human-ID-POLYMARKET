@@ -36,7 +36,7 @@ export default function GlassLogin() {
             scale: 10,      // Massive scale up to simulate entering "into" the card
             opacity: 0,     // Fade out as we get too close
             filter: "blur(10px)",
-            transition: { duration: 2.5, ease: "easeInOut" }
+            transition: { duration: 2.5, ease: "easeInOut" } as const
         }
     };
 

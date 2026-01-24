@@ -1,7 +1,7 @@
 "use client";
 
-import PolygonWalletView from "@/components/wallet/PolygonWalletView";
+import PolymarketGlassDashboard from "@/components/dashboard/PolymarketGlassDashboard";
 
 export default function DashboardPage() {
-    return <PolygonWalletView />;
+    return <PolymarketGlassDashboard />;
 }

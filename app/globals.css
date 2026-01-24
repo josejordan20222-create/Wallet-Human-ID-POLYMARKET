@@ -10,15 +10,8 @@
 
 body {
   color: rgb(var(--foreground-rgb));
-  /* Deep Space Gradient */
-  background: radial-gradient(circle at 50% -20%,
-      #1a1b3a 0%,
-      /* Azul/Violeta muy oscuro en la cima */
-      #05050a 45%,
-      /* Casi negro */
-      #000000 100%
-      /* Negro puro */
-    );
+  background: radial-gradient(ellipse at top right, #312e81, #0f172a, #000000);
+  /* from-indigo-900 via-slate-900 to-black equivalent */
   background-attachment: fixed;
   min-height: 100vh;
   margin: 0;

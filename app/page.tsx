@@ -6,19 +6,12 @@ export default function Home() {
 
             {/* 1. EL BACKGROUND (GIF) */}
             <div className="absolute inset-0 z-0">
-                {/* TRUCO CSS: 'invert' vuelve el GIF blanco en negro.
-           'opacity-60' lo hace sutil para que no distraiga.
-           'object-cover' asegura que cubra toda la pantalla.
-        */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                     src="/background.gif"
                     alt="Background Animation"
-                    className="h-full w-full object-cover invert opacity-60"
+                    className="h-full w-full object-cover"
                 />
-
-                {/* Capa extra para asegurar que el texto sea legible siempre */}
-                <div className="absolute inset-0 bg-black/40" />
             </div>
 
             {/* 2. EL CONTENIDO (Z-Index bajo para no tapar el modal de World ID) */}

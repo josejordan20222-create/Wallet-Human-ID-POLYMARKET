@@ -6,16 +6,19 @@ export default function Home() {
 
             {/* 1. EL BACKGROUND (GIF) */}
             <div className="absolute inset-0 z-0">
-                {/* Overlay oscuro para legibilidad */}
-                <div className="absolute inset-0 z-10 bg-black/60" />
-
-                {/* Etiqueta de imagen para el GIF */}
+                {/* TRUCO CSS: 'invert' vuelve el GIF blanco en negro.
+           'opacity-60' lo hace sutil para que no distraiga.
+           'object-cover' asegura que cubra toda la pantalla.
+        */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                     src="/background.gif"
                     alt="Background Animation"
-                    className="h-full w-full object-cover opacity-80"
+                    className="h-full w-full object-cover invert opacity-60"
                 />
+
+                {/* Capa extra para asegurar que el texto sea legible siempre */}
+                <div className="absolute inset-0 bg-black/40" />
             </div>
 
             {/* 2. EL CONTENIDO (Z-Index alto para estar encima del fondo) */}

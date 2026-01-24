@@ -27,7 +27,16 @@ export async function getMarkets(): Promise<Market[]> {
             return MOCK_MARKETS;
         }
         const data = await response.json();
-        return data;
+
+        // Robust check: API might return { data: [...] } or just [...]
+        if (Array.isArray(data)) {
+            return data;
+        } else if (data && Array.isArray(data.data)) {
+            return data.data; // Handle pagination wrapper
+        }
+
+        console.warn("API response format unexpected", data);
+        return MOCK_MARKETS;
     } catch (error) {
         console.error("Failed to fetch markets", error);
         return MOCK_MARKETS;

@@ -2242,8 +2242,22 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
     if (initTimeoutRef.current) clearTimeout(initTimeoutRef.current);
     initTimeoutRef.current = setTimeout(() => setIsInitTimeout(true), 8000);
 
+    // HARD DEADLINE — guarantees the UI is NEVER permanently frozen.
+    // If XMTP, Aztec, or any await hangs beyond 20s, we force-exit with an error.
+    let hardDeadlineCleared = false;
+    const hardDeadline = setTimeout(() => {
+      if (!hardDeadlineCleared && initInFlight.current) {
+        initInFlight.current = false;
+        setIsInitializing(false);
+        setIsInitTimeout(false);
+        if (initTimeoutRef.current) { clearTimeout(initTimeoutRef.current); initTimeoutRef.current = null; }
+        setInitError('Connection timed out. Please check your wallet is connected and try again.');
+      }
+    }, 20000);
+
     let attempts = 0;
     const maxAttempts = 2; // Reduced from 4 — fewer retries means faster failure feedback
+
 
     // [XMTP-FIX] Define wagmiSigner OUTSIDE the try-block so the catch handler
     // can access it when triggering automatic installation revocation.
@@ -2304,57 +2318,42 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
                 }).catch(() => {});
             }
         }
-        await loadConversations();
-        
-        // Identity Mint logic for WalletConnect wallets
+        // loadConversations in background — does NOT block chat opening
+        loadConversations().catch(() => {});
+
+        // Aztec identity mint: completely fire-and-forget, never blocks success path
         const isWalletConnect = connector?.id?.toLowerCase().includes('walletconnect');
         if (isWalletConnect || !isLocalSystemWallet) {
             const mintKey = `qds_identity_mint_${address}`;
             if (typeof localStorage !== 'undefined' && !localStorage.getItem(mintKey)) {
-                // ✅ OPTIMISTIC LOCK: mark as attempted BEFORE the API call.
                 localStorage.setItem(mintKey, 'true');
-                try {
-                    // Step 1: Use the Aztec address from Context if available, else derive it deterministically
-                    let targetAztecAddress = aztecAddress;
-                    if (!targetAztecAddress) {
-                        const deriveRes = await fetch('/api/aztec/derive-address', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ evmAddress: address })
-                        });
-                        const deriveData = await deriveRes.json();
-                        if (deriveData.success) {
-                            targetAztecAddress = deriveData.aztecAddress;
+                (async () => {
+                    try {
+                        let targetAztecAddress = aztecAddress;
+                        if (!targetAztecAddress) {
+                            const deriveRes = await fetch('/api/aztec/derive-address', {
+                                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ evmAddress: address })
+                            });
+                            const deriveData = await deriveRes.json();
+                            if (deriveData.success) targetAztecAddress = deriveData.aztecAddress;
                         }
-                    }
-                    
-                    if (targetAztecAddress) {
-                        // Step 2: Trigger the airdrop script explicitly via the API route
-                        const airdropRes = await fetch('/api/aztec/airdrop', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ address: targetAztecAddress, amount: 10 })
-                        });
-                        const airdropData = await airdropRes.json();
-                        if (airdropData.success) {
-                            // Only show the welcome toast on the very first successful claim
-                            console.log('⚡ Sovereign Identity Active: 10 QDs received!', { 
-                                description: 'Transaction confirmed on Aztec Mainnet.',
-                                explorerUrl: airdropData.explorerUrl
+                        if (targetAztecAddress) {
+                            await fetch('/api/aztec/airdrop', {
+                                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ address: targetAztecAddress, amount: 10 })
                             });
                         }
-                        // On any other response (Already received, error, etc.):
-                        // the optimistic lock above already prevents the next attempt.
+                    } catch (e) {
+                        console.error('[Aztec] Identity airdrop failed (non-fatal):', e);
                     }
-                } catch (e) {
-                    console.error('Identity Airdrop Failed:', e);
-                    // Do NOT remove the localStorage key on error — the lock stays.
-                    // If the claim truly failed on-chain, the user can claim via the
-                    // AztecAirdropCalendar (monthly claim UI) instead.
-                }
+                })();
             }
         }
 
+        // SUCCESS — cancel all safety timers and release init lock
+        hardDeadlineCleared = true;
+        clearTimeout(hardDeadline);
         setIsInitializing(false);
         setIsInitTimeout(false);
         if (initTimeoutRef.current) { clearTimeout(initTimeoutRef.current); initTimeoutRef.current = null; }
@@ -2367,11 +2366,14 @@ export function LedgerChat({ forceAutoInit = false }: LedgerChatProps) {
 
         // Immediately stop retrying if user actively rejected the prompt
         if (isReject) {
+          hardDeadlineCleared = true;
+          clearTimeout(hardDeadline);
           setInitError('Identity authorization rejected. You must approve the Ledger Chat signature to proceed.');
           setIsInitializing(false);
           initInFlight.current = false;
           return;
         }
+
 
         if (attempts >= maxAttempts || errorMsg.includes('XMTP_LIMIT_REACHED')) {
           console.error('[Ledger Chat] Init Error:', err);

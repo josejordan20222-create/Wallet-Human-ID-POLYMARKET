@@ -1,4 +1,4 @@
-﻿import Peer, { MediaConnection } from 'peerjs';
+import Peer, { MediaConnection } from 'peerjs';
 
 export type CallState = 'idle' | 'calling' | 'ringing' | 'connecting' | 'active';
 
@@ -23,7 +23,7 @@ export class WebRTCEngine {
   }
 
   private derivePeerId(walletAddress: string): string {
-    return `ledger${walletAddress.slice(2, 12).toLowerCase()}`;
+    return 'ledger' + walletAddress.slice(2, 12).toLowerCase();
   }
 
   private emit(event: string, detail: unknown) {
@@ -47,7 +47,6 @@ export class WebRTCEngine {
     this.peer.on('call', (call) => {
       const incomingAddress = this.peerIdToAddress(call.peer);
       if (this.localStream && this.activeCalls.size > 0) {
-        // Already in a group call � answer automatically
         call.answer(this.localStream);
         this._trackCall(call, incomingAddress);
         this.activeCalls.set(incomingAddress, call);
@@ -121,8 +120,10 @@ export class WebRTCEngine {
   private _trackCall(call: MediaConnection, address: string) {
     call.on('stream', (remoteStream) => {
       const p = this.participants.get(address);
-      if (p) { p.stream = remoteStream; p.call = call; }
-      else {
+      if (p) {
+        p.stream = remoteStream;
+        p.call = call;
+      } else {
         this.participants.set(address, {
           address, peerId: call.peer, stream: remoteStream, call,
           isMuted: false, isCameraOff: false,
@@ -137,7 +138,10 @@ export class WebRTCEngine {
       this.participants.delete(address);
       this.emit('webrtc_participant_left', { address });
       this.emit('webrtc_participants_updated', { participants: this.getParticipants() });
-      if (this.activeCalls.size === 0) { this._cleanupLocalStream(); this.emit('webrtc_call_ended', {}); }
+      if (this.activeCalls.size === 0) {
+        this._cleanupLocalStream();
+        this.emit('webrtc_call_ended', {});
+      }
     });
 
     call.on('error', (err) => {
@@ -151,7 +155,9 @@ export class WebRTCEngine {
   }
 
   public endCall(): void {
-    for (const [, call] of this.activeCalls) { try { call.close(); } catch {} }
+    for (const [, call] of this.activeCalls) {
+      try { call.close(); } catch { /* ignore */ }
+    }
     this.activeCalls.clear();
     this.participants.clear();
     this._cleanupLocalStream();
@@ -186,6 +192,9 @@ export class WebRTCEngine {
   }
 
   private _cleanupLocalStream(): void {
-    if (this.localStream) { this.localStream.getTracks().forEach((t) => t.stop()); this.localStream = null; }
+    if (this.localStream) {
+      this.localStream.getTracks().forEach((t) => t.stop());
+      this.localStream = null;
+    }
   }
 }

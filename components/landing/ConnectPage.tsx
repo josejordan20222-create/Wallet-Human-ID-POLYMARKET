@@ -92,6 +92,9 @@ export default function ConnectPage() {
   const [qrSession,         setQrSession]         = useState<string | null>(null);
   const [syncStatus,        setSyncStatus]        = useState<"IDLE" | "AWAITING" | "SYNCED" | "ERROR">("IDLE");
   const [pendingId,         setPendingId]         = useState<string | null>(null);
+  const [pendingWalletName, setPendingWalletName] = useState<string | null>(null);
+  const [pendingWalletLogo, setPendingWalletLogo] = useState<string | null>(null);
+
   const [showMobileScanner, setShowMobileScanner] = useState(false);
   const [qrData,            setQrData]            = useState("");
   const [ephemeral,         setEphemeral]         = useState<{ publicKey: string; privateKey: string; isECDH?: boolean } | null>(null);
@@ -281,14 +284,17 @@ export default function ConnectPage() {
     }}
   }, [openAppKit]);
 
-  const handleDesktopWallet = useCallback((walletId: string, rdns: string | null, installUrl: string | null) => {
+  const handleDesktopWallet = useCallback((walletId: string, rdns: string | null, installUrl: string | null, name: string, logo: string) => {
     try { sessionStorage.removeItem("__disconnected__"); localStorage.removeItem("__disconnected__"); } catch {}
     setPendingId(walletId);
+    setPendingWalletName(name);
+    setPendingWalletLogo(logo);
     if (!rdns) { openAppKitSafe(); setPendingId(null); return; }
     const conn = connectors.find((c: any) => c.id === rdns) || connectors.find(c => c.name.toLowerCase().includes(walletId)) || connectors.find(c => c.id === "injected" || (c as any).type === "injected");
     if (conn) connect({ connector: conn });
-    else { setPendingId(null); if (installUrl) toast.error("Wallet not found", { action: { label: "Install", onClick: () => window.open(installUrl, "_blank") } }); }
+    else { setPendingId(null); setPendingWalletName(null); if (installUrl) toast.error("Wallet not found", { action: { label: "Install", onClick: () => window.open(installUrl, "_blank") } }); }
   }, [connect, connectors, openAppKitSafe]);
+
 
   const handleMobileWallet = useCallback((walletId: string) => {
     try { sessionStorage.removeItem("__disconnected__"); localStorage.removeItem("__disconnected__"); localStorage.setItem("system_pending_wakeup", "1"); } catch {}
@@ -408,12 +414,27 @@ export default function ConnectPage() {
 
               ) : effectiveIsConnected && !isLinked ? (
                 <motion.div key="signing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center gap-5 py-10 text-center">
-                  <div className="w-14 h-14 rounded-full border border-black/10 flex items-center justify-center">
-                    <Lock size={20} strokeWidth={1.5} />
-                  </div>
+                  {pendingWalletLogo ? (
+                    <div className="relative">
+                      <div className="w-16 h-16 rounded-2xl border border-black/8 bg-[#F7F7F6] flex items-center justify-center p-3">
+                        <img src={pendingWalletLogo} alt={pendingWalletName ?? ''} className="w-full h-full object-contain" />
+                      </div>
+                      <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-black flex items-center justify-center">
+                        <Lock size={10} className="text-white" />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="w-14 h-14 rounded-full border border-black/10 flex items-center justify-center">
+                      <Lock size={20} strokeWidth={1.5} />
+                    </div>
+                  )}
                   <div>
-                    <h3 className="font-black text-[16px] text-black">Sign to verify ownership</h3>
-                    <p className="text-[12px] text-black/35 mt-1 max-w-[260px] leading-relaxed">Check your wallet. A read-only signature is required. No gas fees.</p>
+                    <h3 className="font-black text-[16px] text-black">
+                      {pendingWalletName ? `Waiting for ${pendingWalletName}` : 'Sign to verify ownership'}
+                    </h3>
+                    <p className="text-[12px] text-black/35 mt-1 max-w-[260px] leading-relaxed">
+                      Check your wallet app and approve the signature request. No gas fees.
+                    </p>
                   </div>
                   {authStatus === "failed" ? (
                     <div className="flex flex-col gap-2 w-full">
@@ -423,11 +444,15 @@ export default function ConnectPage() {
                       <button onClick={handleTotalDisconnect} className="text-[10px] font-mono text-black/25 hover:text-red-500 uppercase tracking-widest transition-colors mt-1">Disconnect</button>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-widest text-black/30 animate-pulse">
-                      <Loader2 size={11} className="animate-spin" /> Awaiting signature...
+                    <div className="flex flex-col items-center gap-3 w-full">
+                      <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-widest text-black/30 animate-pulse">
+                        <Loader2 size={11} className="animate-spin" /> Awaiting signature...
+                      </div>
+                      <button onClick={handleTotalDisconnect} className="text-[9px] font-mono text-black/20 hover:text-red-400 uppercase tracking-widest transition-colors">Cancel</button>
                     </div>
                   )}
                 </motion.div>
+
 
               ) : (
                 <motion.div key="form" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col gap-2">
@@ -466,7 +491,7 @@ export default function ConnectPage() {
                       <div className="flex flex-col gap-2">
                         {DESKTOP_WALLETS.map(w => (
                           <WalletRow key={w.id} logo={w.logo} name={w.name} badge={w.badge}
-                            onClick={() => handleDesktopWallet(w.id, w.rdns, w.installUrl)}
+                            onClick={() => handleDesktopWallet(w.id, w.rdns, w.installUrl, w.name, w.logo)}
                             loading={isPending && pendingId === w.id} delay={w.delay} />
                         ))}
                       </div>
@@ -497,12 +522,19 @@ export default function ConnectPage() {
                     <ArrowRight size={13} className="text-black/15 group-hover:text-white shrink-0 transition-all -translate-x-1 group-hover:translate-x-0" />
                   </button>
 
-                  <p className="text-[9px] text-black/25 text-center leading-relaxed mt-4 font-mono uppercase tracking-wider">
-                    By connecting you agree to our{" "}
-                    <Link href="/docs/terms" className="underline hover:text-black transition-colors">Terms</Link>
-                    {" & "}
-                    <Link href="/docs/privacy" className="underline hover:text-black transition-colors">Privacy</Link>.
-                  </p>
+                  {/* Terms + Privy */}
+                  <div className="mt-5 flex flex-col items-center gap-2">
+                    <p className="text-[9px] text-black/30 text-center leading-relaxed font-mono uppercase tracking-wider">
+                      By connecting you agree to our{" "}
+                      <Link href="/docs/terms" className="underline hover:text-black transition-colors">Terms of Service</Link>
+                      {" & "}
+                      <Link href="/docs/privacy" className="underline hover:text-black transition-colors">Privacy Policy</Link>.
+                    </p>
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[#F7F7F6] rounded-full border border-black/8">
+                      <Shield size={10} className="text-black/30" />
+                      <span className="text-[9px] font-mono uppercase tracking-widest text-black/30">Protected by Privy</span>
+                    </div>
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -517,6 +549,47 @@ export default function ConnectPage() {
         </div>
       </div>
 
+      {/* ── WAITING FOR WALLET OVERLAY ─────────────────────────────────── */}
+      <AnimatePresence>
+        {pendingWalletName && isPending && (
+          <motion.div
+            key="waiting-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: "spring", damping: 20, stiffness: 300 }}
+              className="bg-white rounded-3xl shadow-2xl p-8 flex flex-col items-center gap-5 w-[280px]"
+            >
+              {pendingWalletLogo && (
+                <div className="w-16 h-16 rounded-2xl border border-black/8 bg-[#F7F7F6] flex items-center justify-center p-3">
+                  <img src={pendingWalletLogo} alt={pendingWalletName} className="w-full h-full object-contain" />
+                </div>
+              )}
+              <div className="text-center">
+                <p className="font-black text-[16px] text-black">Waiting for {pendingWalletName}</p>
+                <p className="text-[12px] text-black/40 mt-1">Open your wallet app and approve the connection</p>
+              </div>
+              <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-widest text-black/30 animate-pulse">
+                <Loader2 size={12} className="animate-spin" />
+                Awaiting approval...
+              </div>
+              <button
+                onClick={() => { setPendingId(null); setPendingWalletName(null); setPendingWalletLogo(null); }}
+                className="text-[10px] font-mono uppercase tracking-widest text-black/25 hover:text-black transition-colors"
+              >
+                Cancel
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {isMobile && mounted && (
         <DynamicUniversalScanModal isOpen={showMobileScanner} onClose={() => setShowMobileScanner(false)} address={address ?? ""} mode="session-only" onScan={() => { setShowMobileScanner(false); toast.success("Session synchronized"); }} />
       )}
@@ -528,3 +601,4 @@ export default function ConnectPage() {
     </div>
   );
 }
+
